@@ -1,5 +1,8 @@
 use tokio::sync::oneshot::{channel, Receiver};
-use vector_core::event::{Event, EventArray, EventContainer, LogEvent};
+use vector_core::{
+    config::OutputId,
+    event::{Event, EventArray, EventContainer, LogEvent},
+};
 
 use crate::{
     config::{unit_test::UnitTestSourceConfig, ConfigBuilder},
@@ -81,7 +84,7 @@ async fn test_sync_transform_single_event() {
 #[tokio::test]
 async fn test_task_transform_single_event() {
     assert_transform_compliance(async {
-        let original_event = Event::Log(LogEvent::from("function transform being tested"));
+        let mut original_event = Event::Log(LogEvent::from("function transform being tested"));
 
         let (topology, rx) = create_topology(original_event.clone(), TransformType::Task).await;
         topology.stop().await;
@@ -91,6 +94,8 @@ async fn test_task_transform_single_event() {
         assert_eq!(events.len(), 1);
 
         let event = events.remove(0);
+
+        *original_event.metadata_mut().source_mut() = Some(OutputId::from("transform"));
         assert_eq!(original_event, event);
     })
     .await;
